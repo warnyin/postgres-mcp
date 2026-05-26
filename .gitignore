@@ -1,0 +1,18 @@
+node_modules/
+dist/
+*.log
+npm-debug.log*
+.DS_Store
+.env
+.env.local
+.env.*.local
+.vscode/
+.idea/
+*.swp
+*.swo
+coverage/
+.nyc_output/
+
+# Skill / builder artifacts (kept locally only)
+mcp-builder/
+skills-lock.json

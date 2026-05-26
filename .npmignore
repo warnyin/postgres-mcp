@@ -1,0 +1,14 @@
+src/
+node_modules/
+mcp-builder/
+skills-lock.json
+tsconfig.json
+.gitignore
+.npmignore
+*.log
+.DS_Store
+.env*
+.vscode/
+.idea/
+coverage/
+.github/
