@@ -444,7 +444,9 @@ Returns:
       }
       try {
         const jsonSql = `EXPLAIN (FORMAT JSON${analyze ? ", ANALYZE, BUFFERS" : ""}) ${sql}`;
-        const jsonResult = await runQuery(jsonSql, [], { readOnly: !analyze ? true : false });
+        // ANALYZE really executes the statement — keep the READ ONLY transaction
+        // as the engine-level backstop (read-only statements run fine inside it).
+        const jsonResult = await runQuery(jsonSql, [], { readOnly: true });
         const plan = (jsonResult.rows[0] as { ["QUERY PLAN"]?: unknown })?.["QUERY PLAN"];
         if (response_format === "json") {
           const out = { plan };

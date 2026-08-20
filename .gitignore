@@ -16,3 +16,4 @@ coverage/
 # Skill / builder artifacts (kept locally only)
 mcp-builder/
 skills-lock.json
+sdlc/.state/

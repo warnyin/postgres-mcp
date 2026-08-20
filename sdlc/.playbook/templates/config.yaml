@@ -1,0 +1,8 @@
+# @warnyin/sdlc project config — machine-read; keep minimal.
+language: en
+tools: []            # filled by `warnyin-sdlc init`
+# Optional price table for cost reporting (USD per 1M tokens).
+# prices:
+#   claude-sonnet-5: { input: 3, output: 15, cacheRead: 0.3 }
+# Optional per-artifact cap overrides (see lib/caps.mjs for defaults).
+# caps: {}

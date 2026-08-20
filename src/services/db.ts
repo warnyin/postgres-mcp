@@ -148,21 +148,95 @@ const WRITE_KEYWORDS = [
 ];
 
 /**
- * Strip leading SQL comments and whitespace, then test the first keyword.
- * Used to enforce read-only mode in the `query` tool.
+ * Single-pass tokenizer that blanks out every non-executable region — string
+ * literals ('…' with '' doubling), quoted identifiers ("…" with "" doubling),
+ * dollar-quoted strings ($tag$…$tag$), line comments (--…) and nested block
+ * comments — so the keyword scan below only ever reads executable text.
+ * Comments and quotes MUST be tokenized together: a quote-unaware comment
+ * strip lets two literals spelling '/*' and '*​/' delete real statements
+ * between them. Returns null on any unterminated region: caller fails closed.
+ */
+function stripNonExecutable(sql: string): string | null {
+  let out = "";
+  let i = 0;
+  while (i < sql.length) {
+    const ch = sql[i];
+    const next = sql[i + 1];
+    if (ch === "-" && next === "-") {
+      const nl = sql.indexOf("\n", i + 2);
+      out += " ";
+      if (nl === -1) break;
+      i = nl + 1;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      let depth = 1;
+      let j = i + 2;
+      while (j < sql.length && depth > 0) {
+        if (sql[j] === "/" && sql[j + 1] === "*") { depth++; j += 2; continue; }
+        if (sql[j] === "*" && sql[j + 1] === "/") { depth--; j += 2; continue; }
+        j++;
+      }
+      if (depth > 0) return null; // unterminated block comment — fail closed
+      out += " ";
+      i = j;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      i++;
+      let closed = false;
+      while (i < sql.length) {
+        if (sql[i] === ch) {
+          if (sql[i + 1] === ch) {
+            i += 2; // doubled quote escape stays inside the region
+            continue;
+          }
+          closed = true;
+          i++;
+          break;
+        }
+        i++;
+      }
+      if (!closed) return null;
+      out += " ";
+      continue;
+    }
+    if (ch === "$") {
+      const m = sql.slice(i).match(/^\$([A-Za-z_][A-Za-z0-9_]*)?\$/);
+      if (m) {
+        const tag = m[0];
+        const end = sql.indexOf(tag, i + tag.length);
+        if (end === -1) return null;
+        i = end + tag.length;
+        out += " ";
+        continue;
+      }
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+/**
+ * Blank out comments and quoted regions in ONE pass, then test the first
+ * keyword and scan the rest for write keywords. Used to enforce read-only
+ * mode in the `query` and `explain(analyze)` tools. Fail-closed: any
+ * ambiguity (empty, unterminated region) classifies as NOT read-only. The
+ * engine-level READ ONLY transaction remains the hard guarantee.
  */
 export function isReadOnlySql(sql: string): boolean {
-  const stripped = sql
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/--[^\n]*/g, " ")
-    .trim();
-  if (!stripped) return false;
-  const firstToken = stripped.split(/\s|;|\(/)[0].toUpperCase();
+  const scannable = stripNonExecutable(sql);
+  if (scannable === null) return false;
+  const text = scannable.trim();
+  if (!text) return false;
+  const firstToken = text.split(/\s|;|\(/)[0].toUpperCase();
   if (WRITE_KEYWORDS.includes(firstToken)) return false;
-  // Block multi-statement payloads that smuggle writes after a SELECT.
-  const remainder = stripped.slice(firstToken.length);
+  // Block payloads that smuggle writes after the first token — including
+  // multi-statement (`;DROP`), CTE (`(DELETE`), and other non-word prefixes.
+  const remainder = text.slice(firstToken.length);
   for (const kw of WRITE_KEYWORDS) {
-    const re = new RegExp(`(^|[\\s;])${kw}\\b`, "i");
+    const re = new RegExp(`(^|[^A-Za-z0-9_])${kw}\\b`, "i");
     if (re.test(remainder)) return false;
   }
   return ["SELECT", "WITH", "SHOW", "EXPLAIN", "VALUES", "TABLE"].includes(firstToken);

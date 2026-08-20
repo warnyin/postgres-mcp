@@ -1,0 +1,9 @@
+{"ts":"2026-08-19T23:44:40.479Z","event":"contract","tests":"9"}
+{"ts":"2026-08-19T23:44:40.509Z","event":"build","tasks":"2"}
+{"ts":"2026-08-19T23:47:42.456Z","event":"verify","result":"pass","round":"1"}
+{"ts":"2026-08-19T23:51:08.732Z","event":"verify","result":"pass","round":"2"}
+{"ts":"2026-08-19T23:51:08.763Z","event":"review","blockers":"2","fixed":"2"}
+{"ts":"2026-08-19T23:59:54.229Z","event":"verify","result":"pass","round":"3"}
+{"ts":"2026-08-19T23:59:54.262Z","event":"review","blockers":"4","fixed":"4"}
+{"ts":"2026-08-20T00:10:55.129Z","event":"gate","gate":"ship","action":"open","expires":"2026-08-20T00:40:55.128Z"}
+{"ts":"2026-08-20T00:10:55.873Z","event":"ship","change":"sql-guard-string-literals","specs":["sql-guard"]}
